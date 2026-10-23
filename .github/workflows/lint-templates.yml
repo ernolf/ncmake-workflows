@@ -1,0 +1,123 @@
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# Static quality gates for the workflow templates. https://github.com/ernolf/ncmake-workflows
+#
+# The repository's own workflow: it lives in ncmake-workflows/, where Dependabot
+# keeps it current, and `make workflows-install W=lint-templates` installs it
+# into .github/workflows/.
+#
+# The templates in workflows/ run in every app that installs them, so they are
+# checked here before they ship: yamllint over the repository's YAML, actionlint
+# over the templates and the repository's own workflows. The README table repeats
+# the name and description of every template's properties.json, so a third job
+# fails when the two drift apart. REUSE licensing has its own workflow
+# (reuse.yml, installed via the workflow manager).
+
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  yaml:
+    name: yamllint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install yamllint
+        run: pipx install yamllint
+      - name: Lint YAML
+        run: yamllint .
+
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install actionlint
+        run: go install github.com/rhysd/actionlint/cmd/actionlint@latest
+      - name: Lint workflows (templates and own workflows)
+        run: |
+          "$(go env GOPATH)/bin/actionlint" -color \
+            .github/workflows/*.yml workflows/*.yml ncmake-workflows/*.yml
+
+  readme:
+    name: README workflows table
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Compare the table with the templates
+        shell: python
+        run: |
+          import glob
+          import json
+          import os
+          import re
+          import sys
+
+          errors = []
+
+          # Template name -> (name, description) from its properties.json,
+          # None when the sidecar is missing.
+          templates = {}
+          for path in sorted(glob.glob('workflows/*.yml')):
+              name = os.path.basename(path)[:-len('.yml')]
+              props = 'workflows/%s.properties.json' % name
+              if not os.path.isfile(props):
+                  errors.append('%s has no %s' % (path, props))
+                  templates[name] = None
+                  continue
+              with open(props, encoding='utf-8') as f:
+                  data = json.load(f)
+              templates[name] = (data.get('name', ''), data.get('description', ''))
+          for props in sorted(glob.glob('workflows/*.properties.json')):
+              if os.path.basename(props)[:-len('.properties.json')] not in templates:
+                  errors.append('%s has no template next to it' % props)
+
+          with open('README.md', encoding='utf-8') as f:
+              readme = f.read()
+          section = re.search(r'^## Workflows\n(.*?)(?=^## |\Z)', readme, re.M | re.S)
+          if not section:
+              errors.append('README.md has no "## Workflows" section')
+          table = [l for l in (section.group(1).splitlines() if section else []) if l.startswith('|')]
+
+          # The first two table lines are the header and the separator.
+          rows = {}
+          for line in table[2:]:
+              cells = [c.strip().replace('\\|', '|') for c in re.split(r'(?<!\\)\|', line.strip())[1:-1]]
+              m = re.fullmatch(r'\[`([^`]+)`\]\(workflows/([^)]+)\.yml\)', cells[0]) if len(cells) == 3 else None
+              if not m or m.group(1) != m.group(2):
+                  errors.append('README.md: row not in the form | [`<name>`](workflows/<name>.yml) | <name> | <description> |: %s' % line)
+                  continue
+              if m.group(1) in rows:
+                  errors.append('README.md: %s has more than one row' % m.group(1))
+              rows[m.group(1)] = (cells[1], cells[2])
+
+          for name, props in templates.items():
+              if name not in rows:
+                  errors.append('README.md has no row for workflows/%s.yml' % name)
+              elif props is not None and rows[name] != props:
+                  errors.append('README.md: the row of %s differs from its properties.json, expected | %s | %s |' % (name, props[0], props[1]))
+          for name in rows:
+              if name not in templates:
+                  errors.append('README.md lists %s, which has no workflows/%s.yml' % (name, name))
+
+          for e in errors:
+              print('::error::%s' % e)
+          sys.exit(1 if errors else 0)
