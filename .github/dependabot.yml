@@ -5,7 +5,7 @@
 version: 2
 updates:
   # The actions of the templates (workflows/) and of the repository's own
-  # workflows (ncmake-workflows/). With directories other than "/", Dependabot
+  # workflows (.ncmake/workflows/). With directories other than "/", Dependabot
   # reads only the YAML files of those directories, so it never opens
   # .github/workflows: those workflows are managed by ncmake, and a change by
   # Dependabot would make ncmake flag them as locally modified. The apps receive
@@ -14,7 +14,7 @@ updates:
   - package-ecosystem: github-actions
     directories:
       - "/workflows"
-      - "/ncmake-workflows"
+      - "/.ncmake/workflows"
     schedule:
       interval: weekly
     commit-message:

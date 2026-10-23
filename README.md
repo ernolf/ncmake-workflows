@@ -27,7 +27,7 @@ Each template is `workflows/<name>.yml`, with its name and description in `workf
 | Template | Name | Description |
 | --- | --- | --- |
 | [`branch-cleanup`](workflows/branch-cleanup.yml) | ncmake branch cleanup | Delete a merged pull request's head branch if it still exists (a portable, workflow-shipped equivalent of the repository "Automatically delete head branches" setting) |
-| [`lint-actions`](workflows/lint-actions.yml) | Lint actions | Run actionlint over every tracked GitHub Actions workflow: .github/workflows/, an app's ncmake-workflows/ folder and templates next to a properties.json, with the repository's own configuration when it has one; a repository without workflows passes |
+| [`lint-actions`](workflows/lint-actions.yml) | Lint actions | Run actionlint over every tracked GitHub Actions workflow: .github/workflows/, an app's .ncmake/workflows/ folder and templates next to a properties.json, with the repository's own configuration when it has one; a repository without workflows passes |
 | [`lint-markdown`](workflows/lint-markdown.yml) | Lint Markdown | Run markdownlint-cli2 over every tracked Markdown file, with the repository's own configuration or the default rules minus those GitHub Markdown breaks on purpose; a repository without Markdown files passes |
 | [`lint-php-syntax`](workflows/lint-php-syntax.yml) | Lint php syntax | Run php -l over every tracked PHP file, without composer or appinfo/info.xml; the version matrix comes from the PHP_VERSIONS variable, a .php-version file or the template default |
 | [`lint-shell`](workflows/lint-shell.yml) | Lint shell | Run shellcheck over every tracked shell script, found by extension or by shebang (covers extensionless commands); a repository without shell scripts passes |

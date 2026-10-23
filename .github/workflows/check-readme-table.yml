@@ -3,7 +3,7 @@
 #
 # README table check for the workflow templates. https://github.com/ernolf/ncmake-workflows
 #
-# The repository's own workflow: it lives in ncmake-workflows/, where Dependabot
+# The repository's own workflow: it lives in .ncmake/workflows/, where Dependabot
 # keeps it current, and `make workflows-install W=check-readme-table` installs it
 # into .github/workflows/.
 #
