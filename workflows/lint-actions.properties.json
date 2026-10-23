@@ -1,6 +1,6 @@
 {
     "name": "Lint actions",
-    "description": "Run actionlint over every tracked GitHub Actions workflow: .github/workflows/, an app's ncmake-workflows/ folder and templates next to a properties.json, with the repository's own configuration when it has one; a repository without workflows passes",
+    "description": "Run actionlint over every tracked GitHub Actions workflow: .github/workflows/, an app's .ncmake/workflows/ folder and templates next to a properties.json, with the repository's own configuration when it has one; a repository without workflows passes",
     "categories": [
         "ncmake"
     ]

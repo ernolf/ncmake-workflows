@@ -10,8 +10,8 @@
     "source": "ncmake"
   },
   "check-readme-table.yml": {
-    "hash": "45f821adf1fd86239c2638cfb7111324764ac3ec9ec185870002366959400db1",
-    "sha": "f93de1a93a96e084daa2d31ffd3b72deaf3d736e",
+    "hash": "24ce26a5ce7463dc879317f304f0d9576e1ac23d446d6210f3924013372035f8",
+    "sha": "afdcfdfa32d1f58337e7cb47e8428cee6bf00054",
     "source": "local"
   },
   "lint-actions.yml": {
