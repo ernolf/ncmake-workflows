@@ -1,0 +1,7 @@
+{
+    "name": "Lint Markdown",
+    "description": "Run markdownlint-cli2 over every tracked Markdown file, with the repository's own configuration or the default rules minus those GitHub Markdown breaks on purpose; a repository without Markdown files passes",
+    "categories": [
+        "ncmake"
+    ]
+}
