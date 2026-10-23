@@ -1,0 +1,4 @@
+{
+    "name": "Lint templates",
+    "description": "Run yamllint and actionlint over the templates and this repository's workflows, and compare the README table with the templates' properties.json"
+}

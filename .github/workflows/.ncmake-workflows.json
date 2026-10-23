@@ -9,6 +9,11 @@
     "sha": "0a5957bffde5b7b2e4d33f6dae5f75c982ee93e6",
     "source": "ncmake"
   },
+  "lint-templates.yml": {
+    "hash": "4031351141c6c28a03b431ba124ae30c29e42c30edb7d4ae117e3ebd82474e84",
+    "sha": "fcec154b8c319e95f0c3c02409087802c0116aec",
+    "source": "local"
+  },
   "reuse.yml": {
     "hash": "7507fa539b8cdec70a5de786fbac4e38f1e53f9df404dbfc75bb2fe7950bc010",
     "sha": "67fdafc440e24937ece9f2f16d7f2c2df2c7efa5",
