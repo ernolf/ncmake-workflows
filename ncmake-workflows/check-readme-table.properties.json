@@ -1,0 +1,4 @@
+{
+    "name": "Check README table",
+    "description": "Compare the README workflows table with the name and description in each template's properties.json"
+}

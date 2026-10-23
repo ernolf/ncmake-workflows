@@ -1,20 +1,18 @@
 # SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
 # SPDX-License-Identifier: MIT
 #
-# Static quality gates for the workflow templates. https://github.com/ernolf/ncmake-workflows
+# README table check for the workflow templates. https://github.com/ernolf/ncmake-workflows
 #
 # The repository's own workflow: it lives in ncmake-workflows/, where Dependabot
-# keeps it current, and `make workflows-install W=lint-templates` installs it
+# keeps it current, and `make workflows-install W=check-readme-table` installs it
 # into .github/workflows/.
 #
-# The templates in workflows/ run in every app that installs them, so they are
-# checked here before they ship: yamllint over the repository's YAML, actionlint
-# over the templates and the repository's own workflows. The README table repeats
-# the name and description of every template's properties.json, so a third job
-# fails when the two drift apart. REUSE licensing has its own workflow
-# (reuse.yml, installed via the workflow manager).
+# The README table repeats the name and description of every template's
+# properties.json, so this check fails when the two drift apart. yamllint,
+# actionlint and markdownlint come from the generic templates lint-yaml,
+# lint-actions and lint-markdown, installed via the workflow manager.
 
-name: Lint
+name: Check README table
 
 on:
   push:
@@ -25,43 +23,19 @@ permissions:
   contents: read
 
 concurrency:
-  group: lint-${{ github.ref }}
+  group: check-readme-table-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
 jobs:
-  yaml:
-    name: yamllint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - name: Install yamllint
-        run: pipx install yamllint
-      - name: Lint YAML
-        run: yamllint .
-
-  actionlint:
-    name: actionlint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - name: Install actionlint
-        run: go install github.com/rhysd/actionlint/cmd/actionlint@latest
-      - name: Lint workflows (templates and own workflows)
-        run: |
-          "$(go env GOPATH)/bin/actionlint" -color \
-            .github/workflows/*.yml workflows/*.yml ncmake-workflows/*.yml
-
   readme:
     name: README workflows table
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
       - name: Compare the table with the templates
         shell: python
         run: |
