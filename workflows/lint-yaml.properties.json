@@ -1,0 +1,7 @@
+{
+    "name": "Lint YAML",
+    "description": "Run yamllint over every tracked YAML file, with the repository's own configuration or the default set adjusted for GitHub workflows; a repository without YAML files passes",
+    "categories": [
+        "ncmake"
+    ]
+}
