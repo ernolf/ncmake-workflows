@@ -26,6 +26,7 @@ Each template is `workflows/<name>.yml`, with its name and description in `workf
 
 | Template | Name | Description |
 | --- | --- | --- |
+| [`backport`](workflows/backport.yml) | ncmake backport | Apply a pull request's change to a maintenance branch on a "/backport to" comment and open a verified, signed-off pull request there; on an open pull request it runs at the merge |
 | [`branch-cleanup`](workflows/branch-cleanup.yml) | ncmake branch cleanup | Delete a merged pull request's head branch if it still exists (a portable, workflow-shipped equivalent of the repository "Automatically delete head branches" setting) |
 | [`lint-actions`](workflows/lint-actions.yml) | Lint actions | Run actionlint over every tracked GitHub Actions workflow: .github/workflows/, an app's .ncmake/workflows/ folder and templates next to a properties.json, with the repository's own configuration when it has one; a repository without workflows passes |
 | [`lint-containerfiles`](workflows/lint-containerfiles.yml) | Lint Containerfiles | Run hadolint, with shellcheck on every RUN, over every tracked Containerfile and Dockerfile, with the repository's own .hadolint.yaml when it has one; a repository without Containerfiles passes |

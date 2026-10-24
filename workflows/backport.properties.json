@@ -1,0 +1,7 @@
+{
+    "name": "ncmake backport",
+    "description": "Apply a pull request's change to a maintenance branch on a \"/backport to\" comment and open a verified, signed-off pull request there; on an open pull request it runs at the merge",
+    "categories": [
+        "ncmake"
+    ]
+}
