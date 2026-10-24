@@ -125,8 +125,9 @@ jobs:
             Automated by the ncmake workflow updater.
 
             `make workflows-update` refreshed the ncmake-managed workflows from
-            their upstream templates (nextcloud/.github + ncmake). Locally
-            modified workflows are left untouched. Review the diff and merge.
+            their sources (the app's .ncmake/workflows/, ernolf/ncmake-workflows,
+            nextcloud/.github). Locally modified workflows are left untouched.
+            Review the diff and merge.
 
             ---
 
