@@ -1,0 +1,84 @@
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# Generic Containerfile linter: hadolint over every tracked Containerfile and
+# Dockerfile. https://github.com/ernolf/ncmake
+#
+# A file qualifies by its name: Containerfile or Dockerfile, alone or with a
+# suffix or prefix such as Dockerfile.dev or app.Containerfile. hadolint also
+# runs shellcheck on every RUN. It reads the repository's .hadolint.yaml or
+# .hadolint.yml when there is one and uses its defaults otherwise. The image is
+# pinned by digest, so a run lints with exactly the hadolint named here.
+#
+# A repository without Containerfiles passes instead of failing, so the
+# workflow can be installed anywhere without becoming a permanent red cross.
+
+name: Lint Containerfiles
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-containerfiles-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  HADOLINT_IMAGE: ghcr.io/hadolint/hadolint:v2.15.1-debian@sha256:9a3944b7fddcb947d1ffd90829ac1a6e5c30479223358f249d8b96c7d0019e27
+
+jobs:
+  hadolint:
+    name: hadolint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Collect Containerfiles
+        id: collect
+        run: |
+          list="$RUNNER_TEMP/container-files"
+          : > "$list"
+          # Tracked files only: a checkout carries nothing else worth linting,
+          # and git handles names with spaces through the NUL separator. A
+          # tracked dependency tree is not this repository's code, and the
+          # REUSE sidecar of a Containerfile is not one itself.
+          while IFS= read -r -d '' f; do
+            test -f "$f" || continue
+            case "$f" in
+              node_modules/* | */node_modules/* | vendor/* | */vendor/* | *.license) continue ;;
+            esac
+            case "${f##*/}" in
+              Containerfile | Dockerfile | Containerfile.* | Dockerfile.* | *.Containerfile | *.Dockerfile | *.containerfile | *.dockerfile)
+                printf '%s\n' "$f" >> "$list"
+                ;;
+            esac
+          done < <(git ls-files -z)
+          count="$(wc -l < "$list")"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "Containerfiles found: $count"
+          cat "$list"
+
+      - name: Run hadolint
+        if: steps.collect.outputs.count != '0'
+        run: |
+          for f in .hadolint.yaml .hadolint.yml; do
+            if test -f "$f"; then
+              echo "Using the repository configuration $f"
+              break
+            fi
+          done
+          # hadolint looks for its configuration in the working directory, so
+          # the checkout is mounted there; -d '\n' keeps names with spaces intact.
+          xargs -r -d '\n' -a "$RUNNER_TEMP/container-files" \
+            docker run --rm -v "$PWD:/work:ro" -w /work "$HADOLINT_IMAGE" /bin/hadolint
+
+      - name: Nothing to check
+        if: steps.collect.outputs.count == '0'
+        run: echo "No Containerfiles in this repository; nothing to check."

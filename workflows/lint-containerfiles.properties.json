@@ -1,0 +1,7 @@
+{
+    "name": "Lint Containerfiles",
+    "description": "Run hadolint, with shellcheck on every RUN, over every tracked Containerfile and Dockerfile, with the repository's own .hadolint.yaml when it has one; a repository without Containerfiles passes",
+    "categories": [
+        "ncmake"
+    ]
+}
