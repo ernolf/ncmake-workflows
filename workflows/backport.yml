@@ -175,6 +175,11 @@ jobs:
         with:
           client-id: ${{ secrets.NCMAKE_UPDATER_CLIENT_ID }}
           private-key: ${{ secrets.NCMAKE_UPDATER_PRIVATE_KEY }}
+          # Without these the token carries every permission of the app.
+          permission-contents: write # push the backport branch
+          permission-pull-requests: write # open the pull request
+          permission-workflows: write # the change may touch .github/workflows/
+          permission-metadata: read
 
       - name: Check the target branch
         env:
