@@ -41,7 +41,7 @@ on:
   # "@ncmake-updater rebase" in a pull request comment. issue_comment fires for
   # every comment in the repository, plain issues included; the update job
   # filters down to pull request comments that carry the command.
-  issue_comment:
+  issue_comment: # zizmor: ignore[dangerous-triggers] commands only from OWNER/MEMBER/COLLABORATOR, no comment text in run:, default branch checked out
     types: [created]
 
 permissions:
