@@ -1,6 +1,6 @@
 {
     "name": "Lint actions security",
-    "description": "Run zizmor offline over every tracked GitHub Actions workflow and action.yml, with the repository's own zizmor.yml when it has one; findings of medium severity and above fail, all go to the job summary, and ZIZMOR_CODE_SCANNING=true uploads them to code scanning; a repository without workflows passes",
+    "description": "Run make lint-actions-security of the ncmake lint module: zizmor offline over every tracked GitHub Actions workflow and action.yml, with the repository's own zizmor.yml when it has one; findings of medium severity and above fail, the report goes to the job summary, and ZIZMOR_CODE_SCANNING=true uploads the findings to code scanning",
     "categories": [
         "ncmake"
     ]
