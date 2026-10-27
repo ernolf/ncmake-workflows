@@ -1,0 +1,195 @@
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# Workflow security linter: zizmor over every tracked GitHub Actions workflow
+# and action definition.
+# https://github.com/ernolf/ncmake
+#
+# lint-actions checks that a workflow is valid, this one that it is safe:
+# pull_request_target or workflow_run running the code of a pull request,
+# ${{ github.event.* }} expanded into run:, actions not pinned to a commit,
+# permissions broader than the job needs, credentials persisted by
+# actions/checkout, cache poisoning in release workflows. The workflows are
+# collected as lint-actions collects them, together with every tracked
+# action.yml. zizmor runs offline, so it needs no token, and reads
+# .github/zizmor.yml or zizmor.yml from the repository root when there is one.
+#
+# Findings of medium severity and above fail the job, low and informational
+# ones are shown and pass. All of them go to the job summary.
+#
+# The upload to code scanning is off by default, so no job holds
+# security-events: write. The repository variable ZIZMOR_CODE_SCANNING set to
+# true adds a job that uploads the findings as SARIF:
+#   gh variable set ZIZMOR_CODE_SCANNING -b true
+#
+# A repository without workflows passes instead of failing, so the workflow
+# can be installed anywhere without becoming a permanent red cross.
+
+name: Lint actions security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-actions-security-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  ZIZMOR_VERSION: 1.31.1
+  # sha256 of zizmor-x86_64-unknown-linux-gnu.tar.gz of that release, the
+  # digest GitHub shows for the asset.
+  ZIZMOR_SHA256: d185f726bdaf92df78273217dfdd24ebcd6b0ef48cf3ce776ff5762b6e138c99
+
+jobs:
+  collect:
+    name: Collect workflows
+    runs-on: ubuntu-latest
+    outputs:
+      count: ${{ steps.collect.outputs.count }}
+      files: ${{ steps.collect.outputs.files }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Collect workflows and action definitions
+        id: collect
+        run: |
+          list="$RUNNER_TEMP/workflow-files"
+          : > "$list"
+          # Tracked files only: a checkout carries nothing else worth linting,
+          # and git handles names with spaces through the NUL separator. A
+          # tracked dependency tree is not this repository's code.
+          while IFS= read -r -d '' f; do
+            test -f "$f" || continue
+            case "$f" in
+              .github/workflows/* | .ncmake/workflows/*)
+                printf '%s\n' "$f" >> "$list"
+                continue
+                ;;
+              node_modules/* | */node_modules/* | vendor/* | */vendor/*)
+                continue
+                ;;
+            esac
+            case "${f##*/}" in
+              action.yml | action.yaml)
+                printf '%s\n' "$f" >> "$list"
+                continue
+                ;;
+            esac
+            if test -f "${f%.*}.properties.json"; then
+              printf '%s\n' "$f" >> "$list"
+            fi
+          done < <(git ls-files -z -- '*.yml' '*.yaml')
+          count="$(wc -l < "$list")"
+          delim="EOF_$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')"
+          {
+            echo "count=$count"
+            echo "files<<$delim"
+            cat "$list"
+            echo "$delim"
+          } >> "$GITHUB_OUTPUT"
+          echo "Workflows and action definitions found: $count"
+          cat "$list"
+          if test "$count" = 0; then
+            echo "No workflows in this repository; nothing to check."
+          fi
+
+  zizmor:
+    name: zizmor
+    needs: collect
+    if: needs.collect.outputs.count != '0'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install zizmor
+        run: |
+          archive="$RUNNER_TEMP/zizmor.tar.gz"
+          curl -fsSL --retry 3 -o "$archive" \
+            "https://github.com/zizmorcore/zizmor/releases/download/v$ZIZMOR_VERSION/zizmor-x86_64-unknown-linux-gnu.tar.gz"
+          echo "$ZIZMOR_SHA256  $archive" | sha256sum -c -
+          tar -xzf "$archive" -C "$RUNNER_TEMP" zizmor
+
+      - name: Run zizmor
+        env:
+          FILES: ${{ needs.collect.outputs.files }}
+        run: |
+          for f in .github/zizmor.yml .github/zizmor.yaml zizmor.yml zizmor.yaml; do
+            if test -f "$f"; then
+              echo "Using the repository configuration $f"
+              break
+            fi
+          done
+          mapfile -t files < <(printf '%s' "$FILES" | grep -v '^$')
+          out="$RUNNER_TEMP/zizmor.txt"
+          rc=0
+          "$RUNNER_TEMP/zizmor" --offline --no-progress --color never "${files[@]}" > "$out" || rc=$?
+          cat "$out"
+          {
+            echo '## zizmor'
+            echo
+            echo '```text'
+            cat "$out"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          # 11 and 12 mean the highest finding is informational or low, 13 and
+          # 14 medium or high; anything else besides 0 is a failure of zizmor.
+          case "$rc" in
+            0 | 11 | 12) ;;
+            13 | 14)
+              echo "::error::zizmor reports findings of medium severity or above."
+              exit 1
+              ;;
+            *)
+              echo "::error::zizmor failed with exit code $rc."
+              exit 1
+              ;;
+          esac
+
+  code-scanning:
+    name: zizmor code scanning
+    needs: collect
+    if: needs.collect.outputs.count != '0' && vars.ZIZMOR_CODE_SCANNING == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # checkout
+      security-events: write # upload-sarif sends the findings to code scanning
+      actions: read # upload-sarif reads the workflow run in a private repository
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install zizmor
+        run: |
+          archive="$RUNNER_TEMP/zizmor.tar.gz"
+          curl -fsSL --retry 3 -o "$archive" \
+            "https://github.com/zizmorcore/zizmor/releases/download/v$ZIZMOR_VERSION/zizmor-x86_64-unknown-linux-gnu.tar.gz"
+          echo "$ZIZMOR_SHA256  $archive" | sha256sum -c -
+          tar -xzf "$archive" -C "$RUNNER_TEMP" zizmor
+
+      - name: Run zizmor
+        env:
+          FILES: ${{ needs.collect.outputs.files }}
+        run: |
+          mapfile -t files < <(printf '%s' "$FILES" | grep -v '^$')
+          # With SARIF output zizmor exits 0 on findings, so only a failure of
+          # zizmor itself stops the step.
+          "$RUNNER_TEMP/zizmor" --offline --no-progress --format sarif "${files[@]}" > "$RUNNER_TEMP/zizmor.sarif"
+
+      - name: Upload to code scanning
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: ${{ runner.temp }}/zizmor.sarif
+          category: zizmor
