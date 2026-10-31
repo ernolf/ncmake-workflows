@@ -171,12 +171,15 @@ jobs:
       - name: Lint
         run: |
           # php -l takes one file per call, so xargs runs it per file; a
-          # repository without PHP files passes instead of failing.
+          # repository without PHP files passes instead of failing. It runs
+          # without a memory limit, as only the parser runs: a large generated
+          # file exhausts the 128M of the development ini, and php stops on it
+          # without having checked it.
           if [ -z "$(git ls-files '*.php' '*.phtml')" ]; then
             echo "No PHP files in this repository; nothing to check."
             exit 0
           fi
-          git ls-files -z '*.php' '*.phtml' | xargs -0 -r -n 1 -P 4 php -l
+          git ls-files -z '*.php' '*.phtml' | xargs -0 -r -n 1 -P 4 php -d memory_limit=-1 -l
 
   summary:
     name: php-lint-summary
