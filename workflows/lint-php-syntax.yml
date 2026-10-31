@@ -174,12 +174,15 @@ jobs:
           # repository without PHP files passes instead of failing. It runs
           # without a memory limit, as only the parser runs: a large generated
           # file exhausts the 128M of the development ini, and php stops on it
-          # without having checked it.
+          # without having checked it. php -l exits with 255 on a file it cannot
+          # parse, and xargs stops at a command that exits with 255, so a call
+          # that fails exits with 1: xargs goes on to the next file and the step
+          # still fails at the end.
           if [ -z "$(git ls-files '*.php' '*.phtml')" ]; then
             echo "No PHP files in this repository; nothing to check."
             exit 0
           fi
-          git ls-files -z '*.php' '*.phtml' | xargs -0 -r -n 1 -P 4 php -d memory_limit=-1 -l
+          git ls-files -z '*.php' '*.phtml' | xargs -0 -r -n 1 -P 4 sh -c "php -d memory_limit=-1 -l \"\$1\" || exit 1" php-lint
 
   summary:
     name: php-lint-summary
