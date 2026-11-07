@@ -1,0 +1,7 @@
+{
+    "name": "Lint version",
+    "description": "Run make lint-version of the ncmake lint module: the version in package.json, composer.json and package-lock.json against appinfo/info.xml, compared as written; a version that differs fails, the report goes to the job summary, and a repository without appinfo/info.xml passes",
+    "categories": [
+        "ncmake"
+    ]
+}
