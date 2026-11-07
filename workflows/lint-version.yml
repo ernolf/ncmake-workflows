@@ -1,0 +1,82 @@
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# Version linter: the version files of a Nextcloud app agree with
+# appinfo/info.xml.
+# https://github.com/ernolf/ncmake
+#
+# The App Store and the server read the version in appinfo/info.xml, npm and
+# composer read package.json and composer.json, and package-lock.json repeats
+# the version of package.json. When one of them is behind, a release carries
+# two version numbers, and only one of them reaches the user. make version of
+# ncmake bumps them all in one step, so they cannot drift apart; this workflow
+# is the gate for a bump made by hand.
+#
+# The job runs make lint-version of the ncmake lint module, the same target a
+# maintainer runs locally, so both give the same result: the files it reads and
+# the rule that fails live in that module only. It holds version in
+# package.json and composer.json, and version and packages[""].version in
+# package-lock.json, against <version> in appinfo/info.xml, where the file is
+# tracked and states one, compared as written. The ncmake bootstrap is fetched
+# into the runner's temp directory, so the repository needs none of its own.
+# Only the step that fetches the ncmake modules sees a token.
+#
+# A version that differs fails the job, and so does a manifest that is not
+# valid JSON. A repository without appinfo/info.xml passes, so the workflow can
+# be installed anywhere without becoming a permanent red cross. The report goes
+# to the job summary.
+
+name: Lint version
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-version-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  NCMAKE_BOOTSTRAP: https://raw.githubusercontent.com/ernolf/ncmake/main/bootstrap/GNUmakefile
+
+jobs:
+  version:
+    name: version files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Fetch ncmake
+        env:
+          # make dev-init lists the ncmake modules through the GitHub API, which
+          # answers an anonymous call from a shared hosted runner with 403 every
+          # so often.
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/ncmake-bootstrap.mk" "$NCMAKE_BOOTSTRAP"
+          make -f "$RUNNER_TEMP/ncmake-bootstrap.mk" --no-print-directory dev-init
+
+      - name: Run make lint-version
+        run: |
+          out="$RUNNER_TEMP/lint-version.txt"
+          rc=0
+          make -f "$RUNNER_TEMP/ncmake-bootstrap.mk" --no-print-directory lint-version > "$out" || rc=$?
+          cat "$out"
+          {
+            echo '## lint-version'
+            echo
+            echo '```text'
+            cat "$out"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if test "$rc" != 0; then
+            echo "::error::make lint-version failed: a version file differs from appinfo/info.xml or is not valid JSON, or the run could not be carried out."
+            exit 1
+          fi
