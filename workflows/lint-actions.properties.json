@@ -1,6 +1,6 @@
 {
     "name": "Lint actions",
-    "description": "Run actionlint over every tracked GitHub Actions workflow: .github/workflows/, an app's .ncmake/workflows/ folder and templates next to a properties.json, with the repository's own configuration when it has one; a repository without workflows passes",
+    "description": "Run make lint-actions of the ncmake lint module: actionlint over every tracked GitHub Actions workflow (.github/workflows/, an app's .ncmake/workflows/ folder and templates next to a properties.json) with shellcheck over the run: scripts, with the repository's own configuration when it has one and otherwise the self-hosted runners of Nextcloud as known labels; a repository without workflows passes, the report goes to the job summary",
     "categories": [
         "ncmake"
     ]
