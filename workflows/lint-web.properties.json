@@ -1,6 +1,6 @@
 {
     "name": "Lint web",
-    "description": "Run ESLint, Stylelint and html-validate over the tracked JavaScript, CSS and HTML of a repository without a Node project, with the repository's own configuration or each tool's recommended set; a repository with a package.json or without such files passes",
+    "description": "Run ESLint, Stylelint and html-validate over the tracked JavaScript, CSS and HTML of a repository without a Node project, with the repository's own configuration or each tool's recommended set; a repository with a package.json, at the root or as js/package.json of a frontend in js/, or without such files passes",
     "categories": [
         "ncmake"
     ]
