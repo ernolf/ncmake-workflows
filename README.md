@@ -39,7 +39,7 @@ Each template is `workflows/<name>.yml`, with its name and description in `workf
 | [`lint-web`](workflows/lint-web.yml) | Lint web | Run ESLint, Stylelint and html-validate over the tracked JavaScript, CSS and HTML of a repository without a Node project, with the repository's own configuration or each tool's recommended set; a repository with a package.json or without such files passes |
 | [`lint-yaml`](workflows/lint-yaml.yml) | Lint YAML | Run yamllint over every tracked YAML file, with the repository's own configuration or the default set adjusted for GitHub workflows; a repository without YAML files passes |
 | [`release`](workflows/release.yml) | ncmake release tarball | Build the release tarball with ncmake (make build && make dist) and attach it to the published GitHub release |
-| [`workflow-updater`](workflows/workflow-updater.yml) | ncmake workflow update | Refresh the ncmake-managed CI workflows from their upstream templates on a schedule and open a pull request when anything changed (replaces Dependabot for .github/workflows/) |
+| [`workflow-updater`](workflows/workflow-updater.yml) | ncmake workflow update | Refresh the ncmake-managed CI workflows from their upstream templates on a schedule, on the default branch and on every stable* line, and open a pull request for each branch where anything changed (replaces Dependabot for .github/workflows/) |
 
 ## License
 
