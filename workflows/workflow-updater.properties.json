@@ -1,6 +1,6 @@
 {
     "name": "ncmake workflow update",
-    "description": "Refresh the ncmake-managed CI workflows from their upstream templates on a schedule and open a pull request when anything changed (replaces Dependabot for .github/workflows/)",
+    "description": "Refresh the ncmake-managed CI workflows from their upstream templates on a schedule, on the default branch and on every stable* line, and open a pull request for each branch where anything changed (replaces Dependabot for .github/workflows/)",
     "categories": [
         "ncmake"
     ]
