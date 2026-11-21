@@ -1,0 +1,103 @@
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# Install test: the app as it ships, installed on real Nextcloud servers.
+# https://github.com/ernolf/ncmake
+#
+# The job runs make build and make install-test of ncmake, the same targets a
+# maintainer runs locally, so both give the same result. install-test copies
+# what make build staged, byte for byte what a release ships, into the server
+# image ghcr.io/ernolf/ncmake-server of the lowest and the highest major the app
+# declares, enables it with occ, lets the server answer the login page, the
+# dashboard, the files app, the settings, the page of the app, OCS and WebDAV,
+# runs cron.php and reads nextcloud.log. What it checks and which majors it
+# picks live in ncmake only. The ncmake bootstrap is fetched into the runner's
+# temp directory, so the repository needs none of its own. Only the step that
+# fetches the ncmake modules sees a token; the build runs the app's composer and
+# npm steps and holds none that may write to the repository.
+#
+# PHPUNIT=1 runs the app's PHPUnit suite against the same servers (ncmake#527);
+# an app without a suite is no failure.
+#
+# A finding that is worth changing fails the job. A repository without
+# appinfo/info.xml passes, so the workflow can be installed anywhere without
+# becoming a permanent red cross. The report goes to the job summary, and what
+# each run left, the server log among it, to the artifact install-test.
+
+name: Install test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: install-test-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  NCMAKE_BOOTSTRAP: https://raw.githubusercontent.com/ernolf/ncmake/main/bootstrap/GNUmakefile
+
+jobs:
+  install-test:
+    name: install-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check for a Nextcloud app
+        id: app
+        run: |
+          if [ -f appinfo/info.xml ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No appinfo/info.xml in this repository; nothing to install." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Fetch the ncmake modules
+        if: steps.app.outputs.found == 'true'
+        env:
+          # make dev-init lists the ncmake modules through the GitHub API, which
+          # answers an anonymous call from a shared hosted runner with 403 every
+          # so often.
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/ncmake-bootstrap.mk" "$NCMAKE_BOOTSTRAP"
+          make -f "$RUNNER_TEMP/ncmake-bootstrap.mk" --no-print-directory dev-init
+
+      - name: Run make build
+        if: steps.app.outputs.found == 'true'
+        run: make -f "$RUNNER_TEMP/ncmake-bootstrap.mk" --no-print-directory build
+
+      - name: Run make install-test
+        if: steps.app.outputs.found == 'true'
+        run: |
+          out="$RUNNER_TEMP/install-test.txt"
+          rc=0
+          make -f "$RUNNER_TEMP/ncmake-bootstrap.mk" --no-print-directory install-test PHPUNIT=1 > "$out" || rc=$?
+          cat "$out"
+          {
+            echo '## install-test'
+            echo
+            echo '```text'
+            cat "$out"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if test "$rc" != 0; then
+            echo "::error::make install-test failed: the app did not install, enable or run cleanly on a server, or the run could not be carried out. What each run left is in the artifact install-test."
+            exit 1
+          fi
+
+      - name: Upload what each run left
+        if: always() && steps.app.outputs.found == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: install-test
+          path: build/install-test
+          if-no-files-found: ignore
